@@ -1,4 +1,5 @@
 ﻿using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using BookApiProjectDemo.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -15,11 +16,13 @@ namespace BookApiProjectDemo.Controllers
     {
         private readonly IReviewerRepository _reviewersRepository;
         private readonly ILogger<ReviewersController> _logger;
+        private readonly IReviewRepository _reviewRepository;
 
-        public ReviewersController(IReviewerRepository reviewersRepository, ILogger<ReviewersController> logger)
+        public ReviewersController(IReviewerRepository reviewersRepository, ILogger<ReviewersController> logger, IReviewRepository reviewRepository)
         {
             _reviewersRepository = reviewersRepository;
             _logger = logger;
+            _reviewRepository = reviewRepository;
         }
 
 
@@ -36,7 +39,7 @@ namespace BookApiProjectDemo.Controllers
         }
 
         //api/reviewer/reviewerid
-        [HttpGet("{reviewerId}")]
+        [HttpGet("{reviewerId}", Name = "GetReviewer")]
         public IActionResult GetReviewersById (int reviewerId)
         {
             var reviewer = _reviewersRepository.GetReviewerById(reviewerId);
@@ -55,8 +58,14 @@ namespace BookApiProjectDemo.Controllers
                 _logger.LogError("There was an error in GetReviewerbyId", ex);
                 return StatusCode(500);
             }
+            var reviewerDto = new ReviewerDto()
+            {
+                Id = reviewer.Id,
+                FirstName = reviewer.FirstName,
+                LastName = reviewer.LastName
+            };
 
-            return Ok(reviewer);
+            return Ok(reviewerDto);
         }
 
 
@@ -85,6 +94,7 @@ namespace BookApiProjectDemo.Controllers
                 _logger.LogError("there was an error in GetAllReviewsByAReviwer",ex);
                 return StatusCode(500);
             }
+            
 
             return Ok(reviews);
         }
@@ -115,6 +125,89 @@ namespace BookApiProjectDemo.Controllers
             }
 
             return Ok(reviewer);
+        }
+
+
+        //api/reviewers
+        [HttpPost]
+        [ProducesResponseType(201, Type = typeof(Reviewer))]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(500)]
+
+        public IActionResult CreateReviewer([FromBody] Reviewer reviewerToCreate)
+        {
+            if (reviewerToCreate == null)
+                return BadRequest(ModelState);
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            _logger.LogDebug("Attempting to create the reviewer...........");
+
+            if (!_reviewersRepository.CreateReviewer(reviewerToCreate))
+            {
+                ModelState.AddModelError("", "there was an error creating the reviewer...");
+                return StatusCode(500, ModelState);
+            }
+
+            return CreatedAtRoute("GetReviewer", new { reviewerid = reviewerToCreate.Id }, reviewerToCreate);            
+        }
+
+
+        //api/reviewers/reviewerId
+        [HttpPut("{reviewerId}")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(500)]
+        public IActionResult UpdateReviewer(int reviewerId, [FromBody]Reviewer reviewerToUpdate)
+        {
+            if (reviewerToUpdate == null)
+                return BadRequest(ModelState);
+
+            if (reviewerId != reviewerToUpdate.Id)
+                return BadRequest(ModelState);
+
+            if (!_reviewersRepository.ReviewerExist(reviewerId))
+                return NotFound($"the reviewer with Id {reviewerId}, cannot be found");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (!_reviewersRepository.UpdateReviewer(reviewerToUpdate)) ;
+            {
+                ModelState.AddModelError("", "Something went wrong Updating Reviewer..");
+            }
+
+            return NoContent();
+        }
+
+
+        //api/reviewers/reviewerId
+        [HttpDelete("{reviewerId}")]
+        public IActionResult DeleteReviewer(int reviewerId)
+        {
+            if (!_reviewersRepository.ReviewerExist(reviewerId)) 
+                return NotFound($"reviewer with Id of {reviewerId}, cannot be found..");
+
+           var reviewerToDelete = _reviewersRepository.GetReviewerById(reviewerId);
+            var reviewsByTheReviewerToDelete = _reviewersRepository.GetAllReviewsByAReviewer(reviewerId);
+
+            if(!_reviewersRepository.DeleteReviewer(reviewerToDelete))
+            {
+                ModelState.AddModelError("", "Something went wrong deleting reviewer..");
+                return StatusCode(500, ModelState);
+            }
+
+            if (!_reviewRepository.DeleteReviews(reviewsByTheReviewerToDelete.ToList()))
+            {
+                ModelState.AddModelError("", "Something went wrong deleting reviewer..");
+                return StatusCode(500, ModelState);
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            return NoContent();
         }
     }
 }

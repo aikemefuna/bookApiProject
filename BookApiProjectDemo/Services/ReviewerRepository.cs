@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using BookApiProjectDemo.Services.Interface;
 using System;
 using System.Collections.Generic;
@@ -19,6 +20,18 @@ namespace BookApiProjectDemo.Services
             _mapper = mapper;
         }
 
+        public bool CreateReviewer(Reviewer reviewer)
+        {
+             _context.Add(reviewer);
+            return Save();
+        }
+
+        public bool DeleteReviewer(Reviewer reviewer)
+        {
+            _context.Remove(reviewer);
+            return Save();
+        }
+
         public ICollection<ReviewerDto> GetAllReviewers()
         {
             var reviewers = _context.Reviewers.ToList();
@@ -27,20 +40,20 @@ namespace BookApiProjectDemo.Services
             return reviewersQuery;
         }
 
-        public ICollection<ReviewDto> GetAllReviewsByAReviewer(int reviewerId)
+        public ICollection<Review> GetAllReviewsByAReviewer(int reviewerId)
         {
             var reviews = _context.Reviews.Where(r => r.Reviewer.Id == reviewerId).ToList();
-            var reviewsQuery = _mapper.Map<ICollection<ReviewDto>>(reviews);
+            //var reviewsQuery = _mapper.Map<ICollection<ReviewDto>>(reviews);
 
-            return reviewsQuery;
+            return reviews;
         } 
 
-        public ReviewerDto GetReviewerById(int reviewerId)
+        public Reviewer GetReviewerById(int reviewerId)
         {
             var reviewer = _context.Reviewers.SingleOrDefault(r => r.Id == reviewerId);
-            var reviewerQuery = _mapper.Map<ReviewerDto>(reviewer);
+           // var reviewerQuery = _mapper.Map<ReviewerDto>(reviewer);
 
-            return reviewerQuery;
+            return reviewer;
         }
 
         public ReviewerDto GetReviewerOfAreview(int reviewId)
@@ -55,6 +68,18 @@ namespace BookApiProjectDemo.Services
         public bool ReviewerExist(int reviewerId)
         {
             return _context.Reviewers.Any(r => r.Id == reviewerId);
+        }
+
+        public bool Save()
+        {
+            var IsSaved = _context.SaveChanges();
+            return IsSaved > 0 ? true : false;
+        }
+
+        public bool UpdateReviewer( Reviewer reviewer)
+        {
+            _context.Update(reviewer);
+            return Save();
         }
     }
 }

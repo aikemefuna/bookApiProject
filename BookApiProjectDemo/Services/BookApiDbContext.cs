@@ -47,6 +47,9 @@ namespace BookApiProjectDemo.Services
                 .HasOne(a => a.Author)
                 .WithMany(ba => ba.BookAuthors)
                 .HasForeignKey(a => a.AuthorId);
+
+            modelBuilder.Entity<Country>()
+                .Property(p => p.Id).ValueGeneratedOnAdd();
         }
     }
 }

@@ -10,9 +10,16 @@ namespace BookApiProjectDemo.Services.Interface
     public interface IAuthorRepository
     {
         ICollection<AuthorDto> GetAllAuthors();
-        AuthorDto GetAuthor(int authorId);
+        Author GetAuthor(int authorId);
         ICollection<AuthorDto> GetAllAuthorsOfABook(int bookId);
         ICollection<BookDto> GetAllBooksByAnAuthor(int authorId);
         bool AuthorExist(int authorId);
+
+
+        bool CreateAuthor(Author author);
+        bool UpdateAuthor(Author author);
+        bool DeleteAuthor(Author author);
+        bool Save();
+
     }
 }

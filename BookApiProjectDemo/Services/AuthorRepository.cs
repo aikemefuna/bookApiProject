@@ -2,6 +2,7 @@
 using System.Linq;
 using AutoMapper;
 using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using BookApiProjectDemo.Services.Interface;
 
 namespace BookApiProjectDemo.Services
@@ -19,6 +20,18 @@ namespace BookApiProjectDemo.Services
         public bool AuthorExist(int authorId)
         {
             return _authorContext.Authors.Any(a => a.Id == authorId);
+        }
+
+        public bool CreateAuthor(Author author)
+        {
+            _authorContext.Add(author);
+            return Save();
+        }
+
+        public bool DeleteAuthor(Author author)
+        {
+            _authorContext.Remove(author);
+            return Save();
         }
 
         public ICollection<AuthorDto> GetAllAuthors()
@@ -45,12 +58,24 @@ namespace BookApiProjectDemo.Services
             return booksQuery;
         }
 
-        public AuthorDto GetAuthor(int authorId)
+        public Author GetAuthor(int authorId)
         {
             var author = _authorContext.Authors.SingleOrDefault(a => a.Id == authorId);
-            var authorQuery = _mapper.Map<AuthorDto>(author);
+            //var authorQuery = _mapper.Map<AuthorDto>(author);
 
-            return authorQuery;
+            return author;
+        }
+
+        public bool Save()
+        {
+            var isSaved = _authorContext.SaveChanges();
+            return isSaved > 0 ? true : false;
+        }
+
+        public bool UpdateAuthor(Author author)
+        {
+            _authorContext.Update(author);
+            return Save();
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿using BookApiProjectDemo.DTO;
+﻿using AutoMapper;
+using BookApiProjectDemo.ApiRequestModels;
+using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using BookApiProjectDemo.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -16,12 +19,14 @@ namespace BookApiProjectDemo.Controllers
         private readonly ICountryRepository _countriesRepository;
         private readonly ILogger<CountriesController> _logger;
         private readonly IAuthorRepository _authorRepository;
+        private readonly IMapper _mapper;
 
-        public CountriesController(ICountryRepository countriesRepository,ILogger<CountriesController> logger,IAuthorRepository authorRepository)
+        public CountriesController(ICountryRepository countriesRepository,ILogger<CountriesController> logger,IAuthorRepository authorRepository, IMapper mapper)
         {
             _countriesRepository = countriesRepository;
            _logger = logger;
             _authorRepository = authorRepository;
+            _mapper = mapper;
         }
 
         //api/countries
@@ -49,7 +54,7 @@ namespace BookApiProjectDemo.Controllers
         [ProducesResponseType(404)]
         [ProducesResponseType(200, Type = typeof(CountriesDto))]
         //api/countries/id
-        [HttpGet("{countryId}")]
+        [HttpGet("{countryId}", Name = "GetCountryById")]
         public IActionResult GetCountryById (int countryId)
 
         {
@@ -59,14 +64,14 @@ namespace BookApiProjectDemo.Controllers
 
             try
             {
-                //if (!_countriesRepository.CountryExist(countryId))
-                //{
-                //    return NotFound($"the country with the countryId {countryId} could not be found");
-                //}
-                if (country == null)
+                if (!_countriesRepository.CountryExist(countryId))
                 {
                     return NotFound($"the country with the countryId {countryId} could not be found");
                 }
+                //if (country == null)
+                //{
+                //    return NotFound($"the country with the countryId {countryId} could not be found");
+                //}
             }
 
 
@@ -76,19 +81,24 @@ namespace BookApiProjectDemo.Controllers
 
                 return StatusCode(500);
             }
+            var countrydto = new CountriesDto()
+            {
+                 Id = country.Id,
+                 Name = country.Name
+            };
 
-            return Ok(country);
+            return Ok(countrydto);
 
         }
 
 
 
+
+        [HttpGet("authors/{authorId}")]
         [ProducesResponseType(500)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [ProducesResponseType(200, Type = typeof(CountriesDto))]
-
-        [HttpGet("authors/{authorId}")]
         public IActionResult GetCountryOfAnAuthor (int authorId)
         {
             var authorCountry = _countriesRepository.GetCountryOfAnAuthor(authorId);
@@ -157,6 +167,111 @@ namespace BookApiProjectDemo.Controllers
             }
 
             return Ok(authors);
+        }
+
+
+        //api/coountries
+        [HttpPost]
+        [ProducesResponseType(201, Type =  typeof(CountryRequest))]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(422)]
+        [ProducesResponseType(500)]
+        public IActionResult CreateCountry ([FromBody]Country countryToCreate)
+        {
+            if (countryToCreate == null)
+                return BadRequest(ModelState);
+
+            var country = _countriesRepository.GetCountries().FirstOrDefault(c =>
+                                c.Name.Trim().ToUpper() == countryToCreate.Name.Trim().ToUpper());
+
+            if (country != null)
+            {
+                ModelState.AddModelError("", $"Oopss,Country {countryToCreate.Name}, already Exist.");
+                return StatusCode(422, ModelState);
+            }
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (!_countriesRepository.CreateCountry(countryToCreate))
+            {
+                ModelState.AddModelError("", $"Somthing went wrong saving {countryToCreate.Name}.");
+                return StatusCode(500, ModelState);
+            }
+
+            return CreatedAtRoute("GetCountryById", new { countryId = countryToCreate.Id }, countryToCreate);
+            
+        }
+
+        [HttpPut("{countryId}")]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(500)]
+        public IActionResult Updatecountry(int countryId, [FromBody] Country UpdatedCountryInfo)
+        {
+
+            if (UpdatedCountryInfo == null)
+                return BadRequest(ModelState);
+
+
+            if (countryId != UpdatedCountryInfo.Id)
+                return BadRequest(ModelState);
+
+            if (!_countriesRepository.CountryExist(countryId))
+                return NotFound($"the country with the id {countryId}passed was not found");
+
+            if (_countriesRepository.IsDuplicateCountryName(countryId, UpdatedCountryInfo.Name))
+            {
+                ModelState.AddModelError("", $"Country {UpdatedCountryInfo.Name}, already exists");
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            if (!_countriesRepository.UpdateCountry(UpdatedCountryInfo))
+            {
+                ModelState.AddModelError("", $"Somthing went wrong saving {UpdatedCountryInfo.Name}.");
+                return StatusCode(500, ModelState);
+            }
+            return NoContent();
+        }
+
+          //api/countries/countryId
+        [HttpDelete("{countryId}")]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(500)]
+        [ProducesResponseType(409)]
+        [ProducesResponseType(422)]
+        public IActionResult DeleteCountry(int countryId)
+        {
+            //if (deletedCountryInfo == null)
+               // return BadRequest(ModelState);
+
+            if (!_countriesRepository.CountryExist(countryId))
+                return NotFound($"the country with the Id {countryId}, can not be found.");
+
+            var  countryToDelete = _countriesRepository.GetCountry(countryId);
+
+            //if (countryId != deletedCountryInfo.Id)
+             //   return BadRequest(ModelState);
+            
+
+            if (_countriesRepository.GetAuthorsOfACountry(countryId).Count() > 0 )
+            {
+                ModelState.AddModelError("", $"Sorry the country {countryToDelete.Name}, can not be deleted because there are at least 1 author from it.");
+                return StatusCode(409, ModelState);
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (!_countriesRepository.DeleteCountry(countryToDelete))
+            {
+                ModelState.AddModelError("", $"Something went wrong deleting {countryToDelete.Name}.");
+                return StatusCode(500, ModelState);
+            }
+            return NoContent();
         }
     }
 }

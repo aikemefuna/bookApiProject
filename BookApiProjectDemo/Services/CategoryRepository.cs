@@ -27,11 +27,11 @@ namespace BookApiProjectDemo.Services
             return categoriesQuery;
         }
 
-        public CategoryDto GetCategory(int categoryId)
+        public Category GetCategory(int categoryId)
         {
             var category = _context.Categories.SingleOrDefault(c => c.Id == categoryId);
-            var categoryQuery = _mapper.Map<CategoryDto>(category);
-            return categoryQuery;
+          //  var categoryQuery = _mapper.Map<CategoryDto>(category);
+            return category;
         }
         public ICollection<BookDto> GetAllBooksOfACategory(int categoryId)
         {
@@ -58,6 +58,30 @@ namespace BookApiProjectDemo.Services
         {
             var category = _context.Categories.SingleOrDefault(c => c.Name.Equals(categoryName) && c.Id != categoryId);
             return category == null ? false : true;
+        }
+
+        public bool CreateCategory(Category category)
+        {
+            _context.Categories.Add(category);
+            return Save();
+        }
+
+        public bool UpdateCategory(Category category)
+        {
+            _context.Categories.Update(category);
+            return Save();
+        }
+
+        public bool DeleteCategory(Category category)
+        {
+            _context.Categories.Remove(category);
+            return Save();
+        }
+
+        public bool Save()
+        {
+            var IsSaved = _context.SaveChanges();
+            return IsSaved >=0 ? true : false;
         }
     }
 }

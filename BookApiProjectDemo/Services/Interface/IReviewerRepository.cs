@@ -10,10 +10,15 @@ namespace BookApiProjectDemo.Services.Interface
     public interface IReviewerRepository
     {
         ICollection<ReviewerDto> GetAllReviewers();
-        ReviewerDto GetReviewerById(int reviewerId);
+        Reviewer GetReviewerById(int reviewerId);
         ReviewerDto GetReviewerOfAreview(int reviewId );
-        ICollection<ReviewDto> GetAllReviewsByAReviewer(int reviewerId);
+        ICollection<Review> GetAllReviewsByAReviewer(int reviewerId);
         bool ReviewerExist(int reviewerId);
+
+        bool CreateReviewer(Reviewer reviewer);
+        bool UpdateReviewer( Reviewer reviewer);
+        bool DeleteReviewer(Reviewer reviewer);
+        bool Save();
 
     }
 }

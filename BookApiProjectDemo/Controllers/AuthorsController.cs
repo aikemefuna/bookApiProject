@@ -1,4 +1,5 @@
 ﻿using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using BookApiProjectDemo.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -15,11 +16,13 @@ namespace BookApiProjectDemo.Controllers
     {
         private readonly IAuthorRepository _authorRepository;
         private readonly ILogger<AuthorsController> _logger;
+        private readonly ICountryRepository _countryRepository;
 
-        public AuthorsController(IAuthorRepository authorRepository,ILogger<AuthorsController> logger)
+        public AuthorsController(IAuthorRepository authorRepository,ILogger<AuthorsController> logger, ICountryRepository countryRepository)
         {
             _authorRepository = authorRepository;
             _logger = logger;
+            _countryRepository = countryRepository;
         }
 
         //api/authors
@@ -37,7 +40,7 @@ namespace BookApiProjectDemo.Controllers
 
 
         //api/authors/authorId
-        [HttpGet("{authorId}")]
+        [HttpGet("{authorId}", Name = "GetAuthor")]
         public IActionResult GetAuthorById(int authorId)
         {
             var author = _authorRepository.GetAuthor(authorId);
@@ -57,8 +60,14 @@ namespace BookApiProjectDemo.Controllers
                 _logger.LogDebug("thee was an ero in GetAuhor", ex);
                 return StatusCode(500);
             }
+            var authorDto = new AuthorDto()
+            {
+                Id = author.Id,
+                FirstName = author.FirstName,
+                LastName = author.LastName
+            };
 
-            return Ok(author);
+            return Ok(authorDto);
         }
 
 
@@ -116,5 +125,110 @@ namespace BookApiProjectDemo.Controllers
 
             return Ok(books);
         }
+
+
+        //api/authors
+        [HttpPost]
+        [ProducesResponseType(400)]
+        [ProducesResponseType (500)]
+        [ProducesResponseType (404)]
+        [ProducesResponseType(201, Type = typeof(Author))]
+
+        public IActionResult CreateAuthor([FromBody] Author authorToCreate)
+        {
+            if (authorToCreate == null)
+                return BadRequest(ModelState);
+
+            if (!_countryRepository.CountryExist(authorToCreate.Country.Id))
+            {
+                ModelState.AddModelError("", $"Sorry Country doesnot exist.  does not exist.");
+                return StatusCode(404, ModelState);
+            }
+
+
+            authorToCreate.Country = _countryRepository.GetCountry(authorToCreate.Country.Id);
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+
+            if (!_authorRepository.CreateAuthor(authorToCreate))
+            {
+                ModelState.AddModelError("", $"Something went wrong creating {authorToCreate.FirstName}{authorToCreate.LastName}.");
+                return StatusCode(500, ModelState);
+            }
+
+            return CreatedAtRoute("GetAuthor", new { authorId = authorToCreate.Id }, authorToCreate);
+        }
+
+        //api/authors/authorId
+        [HttpPut("{authorId}")]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(500)]
+        [ProducesResponseType(204)] // no content
+        public IActionResult UpdateAuthor (int authorId, [FromBody] Author UpdatedAuthorInfo)
+        {
+            if (UpdatedAuthorInfo == null)
+                return BadRequest(ModelState);
+
+            if (authorId != UpdatedAuthorInfo.Id)
+                BadRequest(ModelState);
+
+            if (!_countryRepository.CountryExist(UpdatedAuthorInfo.Country.Id))
+                ModelState.AddModelError("", $"Sorry Country doesnot exist.  does not exist.");
+
+            if (!ModelState.IsValid)
+                return StatusCode(404, ModelState);
+
+            UpdatedAuthorInfo.Country = _countryRepository.GetCountry(UpdatedAuthorInfo.Country.Id);
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if(!_authorRepository.UpdateAuthor(UpdatedAuthorInfo))
+            {
+                ModelState.AddModelError("", "Error occured when updating Author");
+                return StatusCode(500, ModelState);
+            }
+            return NoContent();
+        }
+
+
+       // api/authors/authorId
+        [HttpDelete("{authorId}")]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(409)]
+        [ProducesResponseType(500)]
+        [ProducesResponseType(204)]//no content
+        public IActionResult DeleteAuthor (int authorId)
+        {
+            if (!_authorRepository.AuthorExist(authorId)) 
+            return NotFound($"The author with the Id of {authorId}, is not found.");
+
+            var authorTodelete = _authorRepository.GetAuthor(authorId);
+
+            if (_authorRepository.GetAllBooksByAnAuthor(authorId).Count > 0)
+            {
+                ModelState.AddModelError("", $"the author with the name {authorTodelete.FirstName}{authorTodelete.LastName}," +
+                    $" cannot be deleted because there are atleast one book by the Author.");
+                return StatusCode(409, ModelState);
+                    
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (!_authorRepository.DeleteAuthor(authorTodelete))
+            {
+                ModelState.AddModelError("", $"there was an error deleting author with the id of {authorId}, with name {authorTodelete.FirstName}{authorTodelete.LastName}");
+            }
+
+            return NoContent();
+        }
+
+
+
     }
 }

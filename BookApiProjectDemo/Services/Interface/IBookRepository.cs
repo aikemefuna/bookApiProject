@@ -1,4 +1,5 @@
 ﻿using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +10,8 @@ namespace BookApiProjectDemo.Services.Interface
     public interface IBookRepository
     {
         ICollection<BookDto> GetAllBooks();
-        BookDto GetBook(int Id);
-        BookDto GetBook(string bookIsbn);
+        Book GetBook(int Id);
+        Book GetBook(string bookIsbn);
 
         bool BookExist(int Id);
         bool BookExist(string bookisbn);
@@ -18,6 +19,13 @@ namespace BookApiProjectDemo.Services.Interface
         bool IsDuplicateIsbn(int bookId,string isbn);
 
         decimal GetBookRating(int bookId);
+
+
+        bool CreateBook(List<int> authorsId, List<int> categoriesId, Book book);
+        bool UpdateBook(List<int> authorsId, List<int> categoriesId, Book book);
+        bool DeleteBook(Book book);
+        bool Save();
+
 
 
 

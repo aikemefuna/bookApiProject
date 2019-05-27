@@ -1,4 +1,5 @@
 ﻿using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,10 +10,16 @@ namespace BookApiProjectDemo.Services.Interface
     public interface IReviewRepository
     {
         ICollection<ReviewDto> GetAllReviews();
-        ReviewDto GetReviewById(int reviewId);
-        ICollection<ReviewDto> GetAllReviewsOfABook(int bookId);
+        Review GetReviewById(int reviewId);
+        ICollection<Review> GetAllReviewsOfABook(int bookId);
         BookDto GetBookOfAReview(int reviewId);
         ReviewerDto GetReviewerOfAReview(int reviewid);
         bool ReviewExist(int reviewId);
+
+        bool CreateReview(Review review);
+        bool DeleteReview(Review review);
+        bool UpdateReview(Review review);
+        bool Save();
+        bool DeleteReviews(List<Review> reviews);
     }
 }

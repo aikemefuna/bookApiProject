@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using BookApiProjectDemo.ApiRequestModels;
 using BookApiProjectDemo.DTO;
 using BookApiProjectDemo.Entities;
 using BookApiProjectDemo.Services.Interface;
+using Microsoft.Extensions.Logging;
 
 namespace BookApiProjectDemo.Services
 {
@@ -13,16 +15,32 @@ namespace BookApiProjectDemo.Services
     {
         private readonly BookApiDbContext _countryContext;
         private readonly IMapper _mapper;
+        
 
         public CountryRepository(BookApiDbContext countryContext, IMapper mapper)
         {
             _countryContext = countryContext;
             _mapper = mapper;
+            
         }
 
         public bool CountryExist(int countryId)
         {
             return _countryContext.Countries.Any(c => c.Id == countryId);
+        }
+
+        public bool CreateCountry(Country country)
+        {
+            _countryContext.Countries.Add(country);
+            return Save();
+        }
+
+        public bool DeleteCountry(Country country)
+        {
+            _countryContext.Remove(country);
+            //_mapper.Map< CountriesDto>(deletedCountry);
+            
+            return Save();
         }
 
         public ICollection<AuthorDto> GetAuthorsOfACountry(int countryId)
@@ -36,21 +54,17 @@ namespace BookApiProjectDemo.Services
         public ICollection<CountriesDto> GetCountries()
         {
             var countries =  _countryContext.Countries.ToList();
-            var listCountries = _mapper.Map<IList<CountriesDto>>(countries);
-
-            
+            var listCountries = _mapper.Map<IList<CountriesDto>>(countries); 
 
             return listCountries;
-
-
         }
 
-        public CountriesDto GetCountry(int countryId)
+        public Country GetCountry(int countryId)
         {
             var country =_countryContext.Countries.SingleOrDefault(c => c.Id == countryId);
-            var specificCountry = _mapper.Map<CountriesDto>(country);
+           // var specificCountry = _mapper.Map<CountriesDto>(country);
 
-            return specificCountry;
+            return country;
         }
 
         public CountriesDto GetCountryOfAnAuthor(int authorId)
@@ -65,5 +79,20 @@ namespace BookApiProjectDemo.Services
             var country = _countryContext.Countries.SingleOrDefault(c => c.Name.Trim().ToUpper().Equals(countryName.Trim().ToUpper()) && c.Id != countryId);
             return country == null ? false : true;
         }
+
+        public bool Save()
+        {
+            var IsSaved = _countryContext.SaveChanges();
+            return IsSaved >= 0 ? true : false;
+        }
+
+        public bool UpdateCountry(Country country)
+        {
+             _countryContext.Update(country);
+           
+            return Save();
+        }
+
+      
     }
 }

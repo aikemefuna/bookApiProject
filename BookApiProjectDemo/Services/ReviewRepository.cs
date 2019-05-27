@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using BookApiProjectDemo.DTO;
+using BookApiProjectDemo.Entities;
 using BookApiProjectDemo.Services.Interface;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,19 @@ namespace BookApiProjectDemo.Services
             _reviewContext = reviewContext;
             _mapper = mapper;
         }
+
+        public bool CreateReview(Review review)
+        {
+            _reviewContext.Reviews.Add(review);
+            return Save();
+        }
+
+        public bool DeleteReview(Review review)
+        {
+            _reviewContext.Reviews.Remove(review);
+            return Save();
+        }
+
         public ICollection<ReviewDto> GetAllReviews()
         {
             var reviews = _reviewContext.Reviews.OrderBy(r => r.Rating).ToList();
@@ -25,11 +39,11 @@ namespace BookApiProjectDemo.Services
             return reviewsQuery;
         }
 
-        public ICollection<ReviewDto> GetAllReviewsOfABook(int bookId)
+        public ICollection<Review> GetAllReviewsOfABook(int bookId)
         {
             var reviews = _reviewContext.Reviews.Where(b => b.Book.Id == bookId).ToList();
-            var reviewsQuery = _mapper.Map<ICollection<ReviewDto>>(reviews);
-            return reviewsQuery;
+           // var reviewsQuery = _mapper.Map<ICollection<ReviewDto>>(reviews);
+            return reviews;
         }
 
         public BookDto GetBookOfAReview(int reviewId)
@@ -40,12 +54,12 @@ namespace BookApiProjectDemo.Services
             return bookOfReview;
         }
 
-        public ReviewDto GetReviewById(int reviewId)
+        public Review GetReviewById(int reviewId)
         {
             var review = _reviewContext.Reviews.SingleOrDefault(r => r.Id == reviewId);
-            var reviewQuery = _mapper.Map<ReviewDto>(review);
+           // var reviewQuery = _mapper.Map<ReviewDto>(review);
 
-            return reviewQuery;
+            return review;
         }
 
         public ReviewerDto GetReviewerOfAReview(int reviewid)
@@ -58,9 +72,28 @@ namespace BookApiProjectDemo.Services
             
         }
 
+        public bool DeleteReviews(List<Review> reviews)
+        {
+            //var reviewersReview = _reviewContext.Reviews.Where(r => r.Reviewer.Id == reviewerId);
+            _reviewContext.RemoveRange(reviews);
+            return Save();
+        }
+
         public bool ReviewExist(int reviewId)
         {
             return _reviewContext.Reviews.Any(r => r.Id == reviewId);
+        }
+
+        public bool Save()
+        {
+            var IsSaved = _reviewContext.SaveChanges();
+            return IsSaved >= 0 ? true : false;
+        }
+
+        public bool UpdateReview(Review review)
+        {
+            _reviewContext.Reviews.Update(review);
+            return Save();
         }
     }
 }
